@@ -142,7 +142,14 @@ async function kek(pass,salt,use){const km=await crypto.subtle.importKey('raw',n
 const gdec=async(k,buf)=>new Uint8Array(await crypto.subtle.decrypt({name:'AES-GCM',iv:buf.slice(0,12)},k,buf.slice(12)));
 const genc=async(k,buf)=>{const iv=crypto.getRandomValues(new Uint8Array(12));return cat(iv,new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM',iv},k,buf)));};
 let KJ={v:1,w:{}}, SESS=null, D=null, OWNER=false;
-async function loadKeys(){try{const c=new AbortController();const t=setTimeout(()=>c.abort(),5000);const r=await fetch('keys.json',{cache:'no-store',signal:c.signal});clearTimeout(t);if(r.ok){const j=await r.json();if(j&&j.w){KJ=j;for(const m in j.w){const o=j.w[m];if(U[m]&&o.s&&o.w){U[m].s=o.s;U[m].w=o.w;U[m].t=o.t;U[m].by=o.by;}}}}}catch(e){}}
+const API='__API__'.startsWith('https://')?'__API__':'';
+const hex=u=>[...new Uint8Array(u)].map(x=>x.toString(16).padStart(2,'0')).join('');
+const authOf=async raw=>hex(await crypto.subtle.digest('SHA-256',cat(raw,new TextEncoder().encode('HHAUTH'))));
+async function apiSet(ma,raw,s,w,by){const r=await fetch(API,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({site:'hh',ma,auth:await authOf(raw),s,w,by})});
+  const j=await r.json();if(!j.ok)throw new Error(j.err==='auth'?'Không xác thực được tài khoản.':'Chưa lưu được ('+(j.err||'lỗi')+').');
+  U[ma].s=s;U[ma].w=w;U[ma].t=j.t;U[ma].by=by;return j;}
+async function loadKeys(){await loadKeysFile();if(API){try{const c=new AbortController();const t=setTimeout(()=>c.abort(),8000);const r=await fetch(API+'?site=hh',{cache:'no-store',signal:c.signal});clearTimeout(t);const j=await r.json();if(j&&j.w)for(const m in j.w){const o=j.w[m];if(U[m]&&o.s&&o.w){U[m].s=o.s;U[m].w=o.w;U[m].t=o.t;U[m].by=o.by;}}}catch(e){}}}
+async function loadKeysFile(){try{const c=new AbortController();const t=setTimeout(()=>c.abort(),5000);const r=await fetch('keys.json',{cache:'no-store',signal:c.signal});clearTimeout(t);if(r.ok){const j=await r.json();if(j&&j.w){KJ=j;for(const m in j.w){const o=j.w[m];if(U[m]&&o.s&&o.w){U[m].s=o.s;U[m].w=o.w;U[m].t=o.t;U[m].by=o.by;}}}}}catch(e){}}
 const findU=v=>{v=String(v||'').trim();if(U[v])return v;const l=v.toLowerCase();return Object.keys(U).find(k=>k.toLowerCase()===l)||null;};
 async function dkOf(code,pass){const u=U[code];if(!u)throw new Error('nouser');return gdec(await kek(pass,b64(u.s),'decrypt'),b64(u.w));}
 async function unlock(code,pass){const raw=await dkOf(code,pass);const dk=await crypto.subtle.importKey('raw',raw,'AES-GCM',false,['encrypt','decrypt']);
@@ -167,6 +174,8 @@ $('pwG').addEventListener('click',async()=>{const e=$('pwE'),cur=$('pwC').value,
   if(n1.length<6){e.textContent='Mật khẩu mới cần ít nhất 6 ký tự.';return;} if(n1!==n2){e.textContent='Hai lần nhập không giống nhau.';return;}
   try{await dkOf(SESS.code,cur);}catch(x){e.textContent='Mật khẩu hiện tại không đúng.';return;}
   e.textContent='Đang tạo mã…';const salt=crypto.getRandomValues(new Uint8Array(16));const w=await genc(await kek(n1,salt,'encrypt'),SESS.raw);const s=toB64(salt),wb=toB64(w);
+  if(API){try{await apiSet(SESS.code,SESS.raw,s,wb,'tu-doi');let keep=false;try{keep=!!localStorage.getItem('hhPw');}catch(x){}if(ls.get('hhPw'))ls.set('hhPw',JSON.stringify({c:SESS.code,p:n1}),keep);
+    e.textContent='';$('pwA').hidden=true;$('pwB').hidden=false;$('pwB').querySelector('p').innerHTML='<b>Đã đổi mật khẩu.</b> Từ giờ đăng nhập bằng mật khẩu mới trên mọi máy; mật khẩu cũ không dùng được nữa.';$('pwCode').hidden=true;$('pwCp').hidden=true;return;}catch(x){e.textContent=x.message;return;}}
   if(SESS.dks&&OWNER){try{await saveWrap(SESS.code,s,wb,'tu-doi');e.textContent='';$('pwA').hidden=true;$('pwB').hidden=false;$('pwB').querySelector('p').innerHTML='<b>Đã đổi mật khẩu.</b>';$('pwCode').hidden=true;$('pwCp').hidden=true;return;}catch(x){e.textContent=x.message;return;}}
   const k=toB64(await genc(SESS.dk,new TextEncoder().encode('HHPW|'+SESS.code+'|'+s+'|'+wb)));
   $('pwCode').value='HHPW-'+btoa(unescape(encodeURIComponent(JSON.stringify({c:SESS.code,s,w:wb,k,t:new Date().toISOString().slice(0,10)}))));
@@ -179,11 +188,11 @@ async function saveWrap(code,s,w,by){let art=null;try{art=window.claude&&await w
   KJ=nk;U[code].s=s;U[code].w=w;U[code].t=nk.w[code].t;U[code].by=by;}
 const amsg=(t,ok)=>{const e=$('admE');e.textContent=t;e.style.color=ok?'var(--good)':'var(--crit)';};
 function admList(){const can=!!(SESS&&SESS.dks),q=($('admQ').value||'').toLowerCase();
-  $('admL').innerHTML=(can?'':'<p class="sub">Muốn <b>cấp lại mật khẩu</b> cho ai đó, đăng nhập tài khoản quản trị (ADMIN_HH hoặc Giám đốc).</p>')+Object.keys(U).filter(c=>!q||c.toLowerCase().includes(q)||U[c].n.toLowerCase().includes(q)).slice(0,60).map(c=>'<div class="acc"><div><b>'+esc(U[c].n)+'</b> · '+esc(c)+'<small>'+esc(U[c].bp||'')+' · '+(U[c].t?(U[c].by==='qt'?'Quản trị cấp lại ':'Đã đổi ')+U[c].t.split('-').reverse().join('/'):'Mật khẩu ban đầu')+'</small></div>'+(can?'<span><input type="text" placeholder="Mật khẩu mới" id="rs-'+c+'" style="width:130px"> <button class="btn" data-rs="'+c+'">Lưu</button></span>':'')+'</div>').join('');}
-function admOpen(){$('admC').value='';amsg('');admList();$('adm').hidden=false;}
+  $('admL').innerHTML=(can?'':'<p class="sub">Muốn <b>cấp lại mật khẩu</b> cho ai đó, đăng nhập tài khoản quản trị (ADMIN_HH hoặc Giám đốc).</p>')+Object.keys(U).filter(c=>!q||c.toLowerCase().includes(q)||U[c].n.toLowerCase().includes(q)).slice(0,60).map(c=>'<div class="acc"><div><b>'+esc(U[c].n)+'</b> · '+esc(c)+'<small>'+esc(U[c].bp||'')+' · '+(U[c].t?(U[c].by==='qt'?'Quản trị cấp lại ':'Tự đổi ')+U[c].t.split('-').reverse().join('/'):'Mật khẩu ban đầu')+'</small></div>'+(can?'<span><input type="text" placeholder="Mật khẩu mới" id="rs-'+c+'" style="width:130px"> <button class="btn" data-rs="'+c+'">Lưu</button></span>':'')+'</div>').join('');}
+function admOpen(){if(API){$('admA').hidden=true;$('admC').closest('label').hidden=true;$('adm').querySelector('.sub').textContent='Nhân viên tự đổi mật khẩu ngay trên web. Ở đây quản trị cấp lại mật khẩu cho người quên: tìm tên, nhập mật khẩu mới, bấm Lưu.';}$('admC').value='';amsg('');admList();$('adm').hidden=false;}
 $('bAdm').addEventListener('click',admOpen);$('admX').onclick=()=>$('adm').hidden=true;$('admQ').addEventListener('input',admList);
 $('adm').addEventListener('click',async e=>{const b=e.target.closest('[data-rs]');if(b){const c=b.dataset.rs,v=$('rs-'+c).value.trim();if(v.length<6){amsg('Mật khẩu cần ít nhất 6 ký tự.');return;}
-  b.disabled=true;amsg('Đang lưu…',true);try{const raw=b64(SESS.dks[c]);const salt=crypto.getRandomValues(new Uint8Array(16));const w=await genc(await kek(v,salt,'encrypt'),raw);await saveWrap(c,toB64(salt),toB64(w),'qt');admList();amsg('Đã cấp mật khẩu mới cho '+U[c].n+': '+v,true);}catch(x){amsg(x.message);}finally{b.disabled=false;}}});
+  b.disabled=true;amsg('Đang lưu…',true);try{const raw=b64(SESS.dks[c]);const salt=crypto.getRandomValues(new Uint8Array(16));const w=await genc(await kek(v,salt,'encrypt'),raw);if(API)await apiSet(c,raw,toB64(salt),toB64(w),'qt');else await saveWrap(c,toB64(salt),toB64(w),'qt');admList();amsg('Đã cấp mật khẩu mới cho '+U[c].n+': '+v,true);}catch(x){amsg(x.message);}finally{b.disabled=false;}}});
 $('admA').addEventListener('click',async()=>{const raw=$('admC').value.replace(/\s+/g,'');if(!raw.startsWith('HHPW-')){amsg('Mã phải bắt đầu bằng HHPW-.');return;}
   let o;try{o=JSON.parse(decodeURIComponent(escape(atob(raw.slice(5)))));}catch(x){amsg('Mã bị thiếu hoặc sai, nhờ nhân viên sao chép lại toàn bộ.');return;}
   if(!U[o.c]||!o.s||!o.w){amsg('Mã không có tài khoản hợp lệ.');return;}
