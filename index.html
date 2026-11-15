@@ -144,7 +144,7 @@ td.wrap{white-space:normal;min-width:220px}
 <script>
 (function(){
 'use strict';
-const BL=JSON.parse(document.getElementById('blobs').textContent), U=BL.users, IT=210000;
+const BL=JSON.parse(document.getElementById('blobs').textContent), U=BL.users, IT=210000;for(const m in U){U[m].g0=U[m].g;U[m].r0=U[m].r;}
 const $=id=>document.getElementById(id);
 const b64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
 const toB64=u=>{let s='';u.forEach(x=>s+=String.fromCharCode(x));return btoa(s);};
@@ -162,7 +162,7 @@ const proofOf=async raw=>toB64(new Uint8Array(await crypto.subtle.digest('SHA-25
 async function apiSet(ma,raw,s,w,by){let j=null;try{const r=await fetch(API,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({npp:NPPK,c:ma,s,w,by,proof:await proofOf(raw)})});j=await r.json();}catch(e){throw new Error('Không kết nối được máy chủ lưu mật khẩu, vui lòng thử lại.');}
   if(!j||!j.ok)throw new Error('Chưa lưu được mật khẩu ('+((j&&j.err)||'lỗi')+').');
   U[ma].s=s;U[ma].w=w;U[ma].t=j.t;U[ma].by=by;return j;}
-async function loadKeys(){await loadKeysFile();if(API){try{const c=new AbortController();const t=setTimeout(()=>c.abort(),8000);const r=await fetch(API+'?npp='+NPPK,{cache:'no-store',signal:c.signal});clearTimeout(t);const j=await r.json();if(j&&j.u)for(const m in j.u){const o=j.u[m];if(!U[m])U[m]={n:o.n,bp:o.bp,r:o.r,g:o.g,web:1,note:o.note,ct:o.t};else U[m].web2=1;}if(j&&j.w)for(const m in j.w){const o=j.w[m];if(U[m]&&o.s&&o.w){U[m].s=o.s;U[m].w=o.w;U[m].t=o.t;U[m].by=o.by;}}}catch(e){}}}
+async function loadKeys(){await loadKeysFile();if(API){try{const c=new AbortController();const t=setTimeout(()=>c.abort(),8000);const r=await fetch(API+'?npp='+NPPK,{cache:'no-store',signal:c.signal});clearTimeout(t);const j=await r.json();if(j&&j.u)for(const m in j.u){const o=j.u[m];if(!U[m])U[m]={n:o.n,bp:o.bp,r:o.r,g:o.g,web:1,note:o.note,ct:o.t};else Object.assign(U[m],{bp:o.bp,r:o.r,g:o.g,pq:1,note:o.note,ct:o.t});}if(j&&j.w)for(const m in j.w){const o=j.w[m];if(U[m]&&o.s&&o.w){U[m].s=o.s;U[m].w=o.w;U[m].t=o.t;U[m].by=o.by;}}}catch(e){}}}
 async function loadKeysFile(){try{const c=new AbortController();const t=setTimeout(()=>c.abort(),5000);const r=await fetch('keys.json',{cache:'no-store',signal:c.signal});clearTimeout(t);if(r.ok){const j=await r.json();if(j&&j.w){KJ=j;for(const m in j.w){const o=j.w[m];if(U[m]&&o.s&&o.w){U[m].s=o.s;U[m].w=o.w;U[m].t=o.t;U[m].by=o.by;}}}}}catch(e){}}
 const findU=v=>{v=String(v||'').trim();if(U[v])return v;const l=v.toLowerCase();return Object.keys(U).find(k=>k.toLowerCase()===l)||null;};
 async function dkOf(code,pass){const u=U[code];if(!u)throw new Error('nouser');return gdec(await kek(pass,b64(u.s),'decrypt'),b64(u.w));}
@@ -204,9 +204,10 @@ async function saveWrap(code,s,w,by){let art=null;try{art=window.claude&&await w
   try{await art.publish({'keys.json':JSON.stringify(nk)});}catch(e){const c=e&&e.code;throw new Error(c==='not_writer'||c==='not_granted'?'Tài khoản Claude đang mở trang không có quyền sửa (cần tài khoản chủ trang).':c==='conflict'?'Trang vừa được cập nhật, hãy tải lại rồi làm lại.':'Chưa lưu được ('+((e&&(e.message||e.code))||'lỗi')+').');}
   KJ=nk;U[code].s=s;U[code].w=w;U[code].t=nk.w[code].t;U[code].by=by;}
 const amsg=(t,ok)=>{const e=$('admE');e.textContent=t;e.style.color=ok?'var(--good)':'var(--crit)';};
+const RL={admin:'Quản trị',ql:'Quản lý ngành',gh:'Giao hàng',bh:'Bán hàng'};
 function admList(){const can=!!(SESS&&SESS.dks),q=($('admQ').value||'').toLowerCase();
-  $('admL').innerHTML=(can?'':'<p class="sub">Muốn <b>cấp lại mật khẩu</b> cho ai đó, đăng nhập tài khoản quản trị (ADMIN_HH hoặc Giám đốc).</p>')+Object.keys(U).filter(c=>!q||c.toLowerCase().includes(q)||U[c].n.toLowerCase().includes(q)).slice(0,60).map(c=>'<div class="acc"><div><b>'+esc(U[c].n)+'</b> · '+esc(c)+'<small>'+esc(U[c].bp||'')+' · '+(U[c].web?' · <b>thêm trên web</b>'+(U[c].note?' ('+esc(U[c].note)+')':''):'')+' · '+(U[c].t?(U[c].by==='qt'?'Quản trị cấp lại ':'Tự đổi ')+U[c].t.split('-').reverse().join('/'):'Mật khẩu ban đầu')+'</small></div>'+(can?'<span><input type="text" placeholder="Mật khẩu mới" id="rs-'+c+'" style="width:130px"> <button class="btn" data-rs="'+c+'">Lưu</button>'+(U[c].web&&API?' <button class="btn" data-del="'+c+'" title="Xóa tài khoản thêm trên web">Xóa</button>':'')+'</span>':'')+'</div>').join('');}
-function admOpen(){if(API){$('admA').hidden=true;$('admC').closest('label').hidden=true;$('adm').querySelector('.sub').textContent='Nhân viên tự đổi mật khẩu ngay trên web. Ở đây quản trị cấp lại mật khẩu cho người quên: tìm tên, nhập mật khẩu mới, bấm Lưu.';}$('admC').value='';amsg('');adPrep();admList();$('adm').hidden=false;}
+  $('admL').innerHTML=(can?'':'<p class="sub">Muốn <b>cấp lại mật khẩu</b> cho ai đó, đăng nhập tài khoản quản trị (ADMIN_HH hoặc Giám đốc).</p>')+Object.keys(U).filter(c=>!q||c.toLowerCase().includes(q)||U[c].n.toLowerCase().includes(q)).slice(0,60).map(c=>'<div class="acc"><div><b>'+esc(U[c].n)+'</b> · '+esc(c)+'<small>'+esc(RL[U[c].r]||'')+' · '+esc(U[c].bp||'')+(U[c].pq?' · <b>đã phân quyền</b>':'')+(U[c].web?' · <b>thêm trên web</b>'+(U[c].note?' ('+esc(U[c].note)+')':''):'')+' · '+(U[c].t?(U[c].by==='qt'?'Quản trị cấp lại ':'Tự đổi ')+U[c].t.split('-').reverse().join('/'):'Mật khẩu ban đầu')+'</small></div>'+(can?'<span><input type="text" placeholder="Mật khẩu mới" id="rs-'+c+'" style="width:130px"> <button class="btn" data-rs="'+c+'">Lưu</button>'+(API&&SESS.mk?' <button class="btn" data-pq="'+c+'">Phân quyền</button>':'')+(U[c].web&&API?' <button class="btn" data-del="'+c+'" title="Xóa tài khoản thêm trên web">Xóa</button>':'')+'</span>':'')+'</div><div class="pqbox" id="pq-'+c+'" hidden>'+'</div>').join('');}
+function admOpen(){if(API){$('admA').hidden=true;$('admC').closest('label').hidden=true;$('adm').querySelector('.sub').textContent='Nhân viên tự đổi mật khẩu ngay trên web. Ở đây quản trị thêm tài khoản, cấp lại mật khẩu (nhập mật khẩu mới, bấm Lưu) và phân quyền (bấm Phân quyền).';}$('admC').value='';amsg('');adPrep();admList();$('adm').hidden=false;}
 $('bAdm').addEventListener('click',admOpen);$('admX').onclick=()=>$('adm').hidden=true;$('admQ').addEventListener('input',admList);
 $('adm').addEventListener('click',async e=>{const b=e.target.closest('[data-rs]');if(b){const c=b.dataset.rs,v=$('rs-'+c).value.trim();if(v.length<6){amsg('Mật khẩu cần ít nhất 6 ký tự.');return;}
   b.disabled=true;amsg('Đang lưu…',true);try{const raw=await dkAdm(c);const salt=crypto.getRandomValues(new Uint8Array(16));const w=await genc(await kek(v,salt,'encrypt'),raw);if(API)await apiSet(c,raw,toB64(salt),toB64(w),'qt');else await saveWrap(c,toB64(salt),toB64(w),'qt');admList();amsg('Đã cấp mật khẩu mới cho '+U[c].n+': '+v,true);}catch(x){amsg(x.message);}finally{b.disabled=false;}}});
@@ -220,8 +221,8 @@ $('admA').addEventListener('click',async()=>{const raw=$('admC').value.replace(/
 const enc8=s=>new TextEncoder().encode(s);
 async function hmacP(ma){const k=await crypto.subtle.importKey('raw',b64(SESS.mk),{name:'HMAC',hash:'SHA-256'},false,['sign']);return new Uint8Array(await crypto.subtle.sign('HMAC',k,enc8('P:'+ma)));}
 async function gidP(ma,dk){return hex(await crypto.subtle.digest('SHA-256',cat(enc8('hh|P:'+ma),dk.slice(0,8)))).slice(0,20);}
-async function dkAdm(c){if(SESS.dks[c])return b64(SESS.dks[c]);const u=U[c];if(!u)throw new Error('Không có tài khoản '+c);
-  if((u.r==='gh'||u.r==='bh')&&SESS.mk)return hmacP(c);const m=Object.keys(SESS.dks).find(x=>U[x]&&U[x].g===u.g&&!U[x].web);if(m)return b64(SESS.dks[m]);throw new Error('Không tìm được khóa của '+c);}
+async function dkAdm(c){const u=U[c];if(!u)throw new Error('Không có tài khoản '+c);if(SESS.dks[c]&&!u.pq&&!u.web)return b64(SESS.dks[c]);
+  if((u.r==='gh'||u.r==='bh')){if(u.g===u.g0&&SESS.dks[c])return b64(SESS.dks[c]);if(SESS.mk)return hmacP(c);}const m=Object.keys(SESS.dks).find(x=>U[x]&&U[x].g0===u.g&&U[x].g===U[x].g0);if(m)return b64(SESS.dks[m]);throw new Error('Không tìm được khóa của '+c);}
 const noDau=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[đĐ]/g,'d').replace(/[^A-Za-z ]/g,' ').trim().toLowerCase();
 function maTu(ten){const p=noDau(ten).split(/\s+/).filter(Boolean);if(!p.length)return'';let b=p[p.length-1]+p.slice(0,-1).map(x=>x[0]).join('');let c=b,i=2;while(findU(c))c=b+(i++);return c;}
 let adAuto=true;
@@ -246,6 +247,20 @@ $('adGo').addEventListener('click',async()=>{const b=$('adGo'),n=$('adN').value.
     ['adN','adNote','adC'].forEach(i=>$(i).value='');$('adP').value='Haiha@123';adAuto=true;$('admQ').value=c;admList();
     amsg('Đã tạo tài khoản '+n+' — tên đăng nhập: '+c+' · mật khẩu: '+pw+'. Gửi cho nhân viên đăng nhập tại npphaiha.github.io rồi tự đổi mật khẩu.',true);}
   catch(x){amsg(x.message);}finally{b.disabled=false;}});
+$('adm').addEventListener('click',async e=>{const b=e.target.closest('[data-pq]');if(!b)return;const c=b.dataset.pq,box=$('pq-'+c);
+  if(!box.hidden){box.hidden=true;return;}
+  box.innerHTML='<div style="display:grid;gap:6px;padding:8px 10px;margin:4px 0 8px;border:1px dashed var(--line);border-radius:8px"><b>Phân quyền cho '+esc(U[c].n)+' ('+esc(c)+')</b><small>Hiện tại: '+esc(RL[U[c].r]||'')+' · '+esc(U[c].bp||'')+'</small><label>Quyền mới<select id="pqr-'+c+'">'+$('adR').innerHTML+'</select></label><label>Mật khẩu mới cho người này<input type="text" id="pqp-'+c+'" value="Haiha@123"></label><small>Đổi quyền thì phải đặt mật khẩu mới; báo lại cho nhân viên để đăng nhập rồi tự đổi.</small><div><button class="btn pri" type="button" data-pqgo="'+c+'">Lưu phân quyền</button></div></div>';box.hidden=false;});
+$('adm').addEventListener('click',async e=>{const b=e.target.closest('[data-pqgo]');if(!b)return;const c=b.dataset.pqgo,rv=$('pqr-'+c).value,pw=$('pqp-'+c).value;
+  if(pw.length<6){amsg('Mật khẩu cần ít nhất 6 ký tự.');return;}
+  b.disabled=true;amsg('Đang lưu phân quyền…',true);
+  try{const u=U[c];let r,g,bp,dk;
+    if(rv==='gh'||rv==='bh'){r=rv;bp=rv==='gh'?'Giao hàng':'Bán hàng';if((u.r0==='gh'||u.r0==='bh')&&SESS.dks[c]){dk=b64(SESS.dks[c]);g=u.g0;}else{dk=await hmacP(c);g=await gidP(c,dk);}}
+    else{const o=SESS.gopts[+rv.slice(1)];r=o.r;dk=b64(SESS.dks[o.m]);g=U[o.m].g0;bp=r==='admin'?'Quản trị':o.l.replace('Quản lý ngành: ','QL ');}
+    const salt=crypto.getRandomValues(new Uint8Array(16));const w=await genc(await kek(pw,salt,'encrypt'),dk);const vt=hex(await crypto.subtle.digest('SHA-256',enc8(await proofOf(dk))));
+    const j=await apiAdm({act:'role',c,n:u.n,bp,r,g,note:u.note||'',s:toB64(salt),w:toB64(w),vt});
+    Object.assign(u,{bp,r,g,s:toB64(salt),w:toB64(w),t:j.t,by:'qt'});if(!u.web)u.pq=1;
+    $('admQ').value=c;admList();amsg('Đã phân quyền '+u.n+' ('+c+'): '+RL[r]+' · '+bp+'. Mật khẩu mới: '+pw+' — báo cho nhân viên đăng nhập lại.',true);}
+  catch(x){amsg(x.message);b.disabled=false;}});
 $('adm').addEventListener('click',async e=>{const b=e.target.closest('[data-del]');if(!b)return;const c=b.dataset.del;
   if(b.dataset.ok!=='1'){b.dataset.ok='1';b.textContent='Bấm lần nữa để xóa';return;}
   b.disabled=true;amsg('Đang xóa…',true);try{await apiAdm({act:'del',c});delete U[c];admList();amsg('Đã xóa tài khoản '+c+'.',true);}catch(x){amsg(x.message);b.disabled=false;}});
