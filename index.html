@@ -142,7 +142,8 @@ async function kek(pass,salt,use){const km=await crypto.subtle.importKey('raw',n
 const gdec=async(k,buf)=>new Uint8Array(await crypto.subtle.decrypt({name:'AES-GCM',iv:buf.slice(0,12)},k,buf.slice(12)));
 const genc=async(k,buf)=>{const iv=crypto.getRandomValues(new Uint8Array(12));return cat(iv,new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM',iv},k,buf)));};
 let KJ={v:1,w:{}}, SESS=null, D=null, OWNER=false;
-const API='https://script.google.com/macros/s/AKfycbxcMf7CAAlJDAoEqe_MwsSAPdKaf0CjxMuSyK0R193gxCDatjNVGsihB_ehKjsrSQ/exec'.startsWith('https://')?'https://script.google.com/macros/s/AKfycbxcMf7CAAlJDAoEqe_MwsSAPdKaf0CjxMuSyK0R193gxCDatjNVGsihB_ehKjsrSQ/exec':'';
+const ONGH=/github\.io$/.test(location.hostname);
+const API=ONGH&&'https://script.google.com/macros/s/AKfycbxcMf7CAAlJDAoEqe_MwsSAPdKaf0CjxMuSyK0R193gxCDatjNVGsihB_ehKjsrSQ/exec'.startsWith('https://')?'https://script.google.com/macros/s/AKfycbxcMf7CAAlJDAoEqe_MwsSAPdKaf0CjxMuSyK0R193gxCDatjNVGsihB_ehKjsrSQ/exec':'';
 const hex=u=>[...new Uint8Array(u)].map(x=>x.toString(16).padStart(2,'0')).join('');
 const NPPK='hhdh';
 const proofOf=async raw=>toB64(new Uint8Array(await crypto.subtle.digest('SHA-256',raw)));
@@ -177,6 +178,7 @@ $('pwG').addEventListener('click',async()=>{const e=$('pwE'),cur=$('pwC').value,
   e.textContent='Đang tạo mã…';const salt=crypto.getRandomValues(new Uint8Array(16));const w=await genc(await kek(n1,salt,'encrypt'),SESS.raw);const s=toB64(salt),wb=toB64(w);
   if(API){try{await apiSet(SESS.code,SESS.raw,s,wb,'tu-doi');let keep=false;try{keep=!!localStorage.getItem('hhPw');}catch(x){}if(ls.get('hhPw'))ls.set('hhPw',JSON.stringify({c:SESS.code,p:n1}),keep);
     e.textContent='';$('pwA').hidden=true;$('pwB').hidden=false;$('pwB').querySelector('p').innerHTML='<b>Đã đổi mật khẩu.</b> Từ giờ đăng nhập bằng mật khẩu mới trên mọi máy; mật khẩu cũ không dùng được nữa.';$('pwCode').hidden=true;$('pwCp').hidden=true;return;}catch(x){e.textContent=x.message;return;}}
+  if(!API&&!(SESS.dks&&OWNER)){e.innerHTML='Đổi mật khẩu tại trang web chính: <a href="https://npphaiha.github.io/" target="_blank" rel="noopener">npphaiha.github.io</a> (mở bằng trình duyệt Chrome/Safari), đăng nhập rồi bấm Đổi mật khẩu.';return;}
   if(SESS.dks&&OWNER){try{await saveWrap(SESS.code,s,wb,'tu-doi');e.textContent='';$('pwA').hidden=true;$('pwB').hidden=false;$('pwB').querySelector('p').innerHTML='<b>Đã đổi mật khẩu.</b>';$('pwCode').hidden=true;$('pwCp').hidden=true;return;}catch(x){e.textContent=x.message;return;}}
   const k=toB64(await genc(SESS.dk,new TextEncoder().encode('HHPW|'+SESS.code+'|'+s+'|'+wb)));
   $('pwCode').value='HHPW-'+btoa(unescape(encodeURIComponent(JSON.stringify({c:SESS.code,s,w:wb,k,t:new Date().toISOString().slice(0,10)}))));
