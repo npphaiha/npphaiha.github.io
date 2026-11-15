@@ -347,7 +347,7 @@ function uView(m,mode,src){const c=UCFG[mode],st=UST[mode];const tts=st.s?[st.s]
   m.appendChild(kpis([[c.lbl,N0(R.length)+' đơn',scope,c.cls],[c.money,N1(sum(R,'tien')/1e6)+' tr',N0(sum(R,'tien'))+' đ'],['Số xe',N0(new Set(R.map(r=>r.bp)).size),'xe đang có '+c.lbl.toLowerCase()],k4]));
   const bx={};R.forEach(r=>{const o=bx[r.bp]||(bx[r.bp]={bp:r.bp,ten:r.bp_ten,n:0,t:0,kho:{},cu:r.ngay});o.n++;o.t+=r.tien;o.kho[r.kho]=(o.kho[r.kho]||0)+r.tien;if(r.ngay<o.cu)o.cu=r.ngay;});
   const XR=Object.values(bx).map(o=>({...o,ng:Object.entries(o.kho).sort((a,b)=>b[1]-a[1]).map(([k])=>(D.kho_ten||{})[k]||k).join(', ')}));
-  const c1=card('Theo xe – để lên kế hoạch xử lý',scope);c1.appendChild(table(XR,[['Xe','bp'],['Tên','ten'],['Ngành','ng'],['Số đơn','n',N0,'n'],[c.money+' (đ)','t',N0,'n'],['Đơn cũ nhất','cu',DM]],{sum:['n','t'],sort:4,desc:true,search:false}));m.appendChild(c1);
+  const c1=card('Theo xe',scope);c1.appendChild(table(XR,[['Xe','bp'],['Tên','ten'],['Ngành','ng'],['Số đơn','n',N0,'n'],[c.money+' (đ)','t',N0,'n'],['Đơn cũ nhất','cu',DM]],{sum:['n','t'],sort:4,desc:true,search:false}));m.appendChild(c1);
   const bk={};R.forEach(r=>{const o=bk[r.kho]||(bk[r.kho]={kho:(D.kho_ten||{})[r.kho]||r.kho,n:0,t:0});o.n++;o.t+=r.tien;});
   const c2=card('Theo ngành hàng');c2.appendChild(table(Object.values(bk),[['Ngành','kho'],['Số đơn','n',N0,'n'],[c.money+' (đ)','t',N0,'n']],{sum:['n','t'],sort:2,desc:true,search:false}));m.appendChild(c2);
   const bd={};all.filter(r=>(!xe||r.bp===xe)&&r.ngay<=Dd).forEach(r=>{const o=bd[r.ngay]||(bd[r.ngay]={ngay:r.ngay,n:0,t:0});o.n++;o.t+=r.tien;});let cn=0,ct=0;
