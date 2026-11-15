@@ -93,7 +93,7 @@ main .note{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;
 main{gap:10px;padding-top:10px}.card{padding:11px}.fbar label{flex:1 1 100%;min-width:0}.fbar select{width:100%;min-width:0}
 .acc{grid-template-columns:1fr}.acc>span{display:flex;flex-wrap:wrap;gap:6px}.acc>span input{flex:1 1 140px}.modal{padding:8px}.modal>div{padding:14px;max-height:94vh}}
 .msort{display:none}.mmenu{display:none}
-.ph{display:inline-block;margin:1px 4px 1px 0;padding:2px 7px;border:1px solid var(--line);border-radius:999px;font-size:12px;white-space:nowrap;cursor:copy;background:var(--sf2)}.ph:hover{border-color:var(--acc)}.doi{font-size:12.5px;line-height:1.45;min-width:190px}.doi .lb{color:var(--mut)}.nm{color:var(--acc);font-weight:600;cursor:pointer;border-bottom:1px dashed currentColor}.ngc{width:240px;min-width:200px;max-width:260px;white-space:normal!important;font-size:12.5px;line-height:1.35}.nvc{font-size:12px;max-width:220px;white-space:normal;color:var(--mut)}
+.ph{display:inline-block;margin:1px 4px 1px 0;padding:2px 7px;border:1px solid var(--line);border-radius:999px;font-size:12px;white-space:nowrap;cursor:copy;background:var(--sf2)}.ph:hover{border-color:var(--acc)}.doi{font-size:12.5px;line-height:1.45;min-width:190px}.doi .lb{color:var(--mut)}.nm{color:var(--acc);font-weight:600;cursor:pointer;border-bottom:1px dashed currentColor}.ngc{width:240px;min-width:200px;max-width:260px;white-space:normal!important;font-size:12.5px;line-height:1.35}.khl{color:var(--acc);font-weight:600;cursor:pointer;border-bottom:1px dashed currentColor}.nvc{font-size:12px;max-width:220px;white-space:normal;color:var(--mut)}
 .phs{display:inline-flex;flex-wrap:wrap;gap:3px;justify-content:flex-end;min-width:0}
 #toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);background:#1d2b24;color:#fff;padding:8px 14px;border-radius:999px;font-size:13px;opacity:0;transition:.2s;z-index:99;pointer-events:none}#toast.on{opacity:1;transform:translateX(-50%)}
 </style>
@@ -446,10 +446,38 @@ function vCG(m){const R=D.und.filter(r=>inF(r.kho)&&!r.trang_thai.startsWith('Đ
   c.appendChild(undTable(RS));m.appendChild(c);if(sel)setTimeout(()=>c.scrollIntoView({behavior:'smooth',block:'start'}),0);}
 function vHT(m){m.appendChild(h('p',{class:'note'},'<b>Hàng tồn</b> = hàng khách trả lại, theo cột Hàng tồn của Báo cáo bán hàng chưa thu tiền (HĐ lập 02–12/11). Trả lại cả đơn: không thu được đồng nào; trả lại một phần: đã giao, khách trả lại một phần hàng.'));uView(m,'ht',D.und);}
 /* ---------- Công nợ ---------- */
-function vCN(m){const R=D.debt.filter(r=>inF(r.kho)),S=D.dstaff.filter(r=>inF(r.kho));
-  m.appendChild(kpis([['Công nợ khách hàng',TY(sum(R,'no'))+' tỷ','chốt 13/11'],['Số khách đang nợ',N0(R.filter(r=>r.no>0).length)],['Nợ nhân viên',TR(sum(S,'no'))+' tr',S.filter(r=>r.no>0).length+' người']]));
-  const c=card('Công nợ khách hàng theo xe','Bảng cân đối phát sinh công nợ ngày 13/11. Xe xếp vào ngành có nhiều tiền thu nhất.');c.appendChild(table(R,[['Xe','bp'],['Nhóm','bp_ten'],['Mã KH','makh'],['Khách hàng','tenkh'],['Nợ đầu (đ)','no_dk',N0,'n'],['Thu (đ)','thu',N0,'n'],['Nợ cuối (đ)','no',N0,'n']],{sort:6,desc:true,sum:['no_dk','thu','no'],ph:'Tìm khách, xe…'}));m.appendChild(c);
-  const c2=card('Công nợ nhân viên');c2.appendChild(table(S.filter(r=>r.no||r.du),[['Xe','bp'],['Nhóm','bp_ten'],['Mã','ma'],['Tên','ten'],['Nợ (đ)','no',N0,'n']],{sort:4,desc:true,sum:['no']}));m.appendChild(c2);}
+const CNS={xe:'',kh:''};
+function vCN(m){const R=D.debt.filter(r=>inF(r.kho)),S=D.dstaff.filter(r=>inF(r.kho));const RN=R.filter(r=>r.no>0),SN=S.filter(r=>r.no>0);
+  m.appendChild(kpis([['Công nợ khách hàng',TY(sum(RN,'no'))+' tỷ',N0(new Set(RN.map(r=>r.makh)).size)+' khách · chốt 13/11'],['Công nợ nhân viên',TR(sum(SN,'no'))+' tr',N0(SN.length)+' người','warn'],['Tổng công nợ',TY(sum(RN,'no')+sum(SN,'no'))+' tỷ','khách hàng + nhân viên']]));
+  const bx={};const g=b=>bx[b]||(bx[b]={bp:b,ten:'',nkh:0,kh:0,nnv:0,nv:0});
+  RN.forEach(r=>{const o=g(r.bp);o.ten=o.ten||r.bp_ten;o.nkh++;o.kh+=r.no;});SN.forEach(r=>{const o=g(r.bp);o.ten=o.ten||r.bp_ten;o.nnv++;o.nv+=r.no;});
+  const XR=Object.values(bx).map(o=>({...o,t:o.kh+o.nv})).sort((x,y)=>y.t-x.t);const sel=XR.some(x=>x.bp===CNS.xe)?CNS.xe:'';
+  const c1=card('Tổng hợp công nợ theo xe','Bảng cân đối phát sinh công nợ ngày 13/11. Bấm vào một xe để xem khách hàng đang nợ của xe đó.');
+  const tw=h('div',{class:'tw'});const t=h('table',{class:'xe-tb'});
+  t.innerHTML='<thead><tr><th>Mã GH chính</th><th>Đội xe phụ trách</th><th class="n">Số KH nợ</th><th class="n">Công nợ KH (đ)</th><th class="n">Số NV nợ</th><th class="n">Công nợ NV (đ)</th><th class="n">Tổng công nợ (đ)</th></tr></thead>';
+  const tb=h('tbody');XR.forEach(o=>{const tr=h('tr',{class:'clk'+(o.bp===sel?' on':''),title:'Xem khách nợ xe '+o.bp},'<td data-l="Mã GH chính"><b>'+esc(o.bp)+'</b></td><td data-l="Đội xe phụ trách">'+xeDoi(o.bp,o.ten)+'</td><td class="n" data-l="Số KH nợ">'+N0(o.nkh)+'</td><td class="n" data-l="Công nợ KH (đ)">'+N0(o.kh)+'</td><td class="n" data-l="Số NV nợ">'+N0(o.nnv)+'</td><td class="n" data-l="Công nợ NV (đ)">'+N0(o.nv)+'</td><td class="n" data-l="Tổng công nợ (đ)"><b>'+N0(o.t)+'</b></td>');
+    tr.onclick=()=>{CNS.xe=o.bp===sel?'':o.bp;CNS.kh='';render();};tb.appendChild(tr);});
+  tb.appendChild(h('tr',{class:'tot'},'<td>Tổng</td><td></td><td class="n" data-l="Số KH nợ">'+N0(sum(XR,'nkh'))+'</td><td class="n" data-l="Công nợ KH (đ)">'+N0(sum(XR,'kh'))+'</td><td class="n" data-l="Số NV nợ">'+N0(sum(XR,'nnv'))+'</td><td class="n" data-l="Công nợ NV (đ)">'+N0(sum(XR,'nv'))+'</td><td class="n" data-l="Tổng công nợ (đ)">'+N0(sum(XR,'t'))+'</td>'));
+  t.appendChild(tb);tw.appendChild(t);c1.appendChild(tw);m.appendChild(c1);
+  // khách hàng: tra cứu nợ ở các xe
+  const khBox=h('div');const showKH=(mk)=>{CNS.kh=mk;khBox.innerHTML='';if(!mk)return;const L=D.debt.filter(r=>r.makh===mk&&(r.no||r.du));if(!L.length)return;
+    const cc=card('Khách hàng '+(L[0].tenkh||'')+' ('+mk+')','Đang nợ ở '+L.filter(r=>r.no>0).length+' xe · tổng nợ '+N0(sum(L,'no'))+' đ');
+    const b=h('button',{class:'btn',type:'button',style:'margin-bottom:8px'},'✕ Đóng');b.onclick=()=>showKH('');cc.appendChild(b);
+    cc.appendChild(table(L.map(r=>({...r})),[['Xe','bp'],['Nhóm','bp_ten'],['Nợ đầu (đ)','no_dk',N0,'n'],['Bán (đ)','ban',N0,'n'],['Thu (đ)','thu',N0,'n'],['Nợ cuối (đ)','no',N0,'n']],{sort:6,desc:true,search:false,sum:['no_dk','ban','thu','no']}));khBox.appendChild(cc);setTimeout(()=>cc.scrollIntoView({behavior:'smooth',block:'start'}),0);};
+  const khCell=(v,r)=>'<span class="khl" data-kh="'+esc(r.makh)+'">'+esc(v)+'</span>';
+  const onKh=box=>box.addEventListener('click',e=>{const k=e.target.closest('.khl');if(!k)return;e.stopPropagation();showKH(k.dataset.kh);});
+  const multi={};D.debt.forEach(r=>{if(r.no>0)multi[r.makh]=(multi[r.makh]||0)+1;});
+  const khCols=[['Mã KH','makh'],['Khách hàng','tenkh',null,'',khCell],['Số xe đang nợ',r=>multi[r.makh]||0,N0,'n'],['Nợ đầu (đ)','no_dk',N0,'n'],['Bán (đ)','ban',N0,'n'],['Thu (đ)','thu',N0,'n'],['Nợ cuối (đ)','no',N0,'n']];
+  if(sel){const o=bx[sel];const c=card('Khách hàng đang nợ – xe '+sel,N0(o.nkh)+' khách · '+N0(o.kh)+' đ. Bấm vào tên khách để xem khách đó đang nợ ở những xe nào.');
+    const b=h('button',{class:'btn',type:'button',style:'margin-bottom:8px'},'← Xem tất cả xe');b.onclick=()=>{CNS.xe='';CNS.kh='';render();};c.appendChild(b);
+    c.insertBefore(h('div',{style:'margin:4px 0 8px'},xeDoi(sel,o.ten)),b);
+    c.appendChild(table(RN.filter(r=>r.bp===sel),khCols,{sort:6,desc:true,sum:['no_dk','ban','thu','no'],ph:'Tìm khách…'}));onKh(c);m.appendChild(c);
+    const NV=SN.filter(r=>r.bp===sel);if(NV.length){const c2=card('Nhân viên đang nợ – xe '+sel);c2.appendChild(table(NV,[['Mã','ma'],['Tên','ten'],['Nợ (đ)','no',N0,'n']],{sort:2,desc:true,sum:['no'],search:false}));m.appendChild(c2);}
+    setTimeout(()=>c.scrollIntoView({behavior:'smooth',block:'start'}),0);}
+  else{const c=card('Tra cứu khách hàng đang nợ','Gõ tên hoặc mã khách. Bấm vào tên khách để xem khách đó đang nợ ở những xe nào và tổng cộng bao nhiêu.');
+    const agg={};RN.forEach(r=>{const o=agg[r.makh]||(agg[r.makh]={makh:r.makh,tenkh:r.tenkh,xe:[],no:0});o.xe.push(r.bp);o.no+=r.no;});
+    c.appendChild(table(Object.values(agg),[['Mã KH','makh'],['Khách hàng','tenkh',null,'',(v,r)=>'<span class="khl" data-kh="'+esc(r.makh)+'">'+esc(v)+'</span>'],['Các xe đang nợ',r=>r.xe.join(', ')],['Tổng nợ (đ)','no',N0,'n']],{sort:3,desc:true,sum:['no'],ph:'Tìm khách hàng…'}));onKh(c);m.appendChild(c);}
+  m.appendChild(khBox);if(CNS.kh)showKH(CNS.kh);}
 /* ---------- Tồn kho ---------- */
 const MUC=['','Theo dõi','Chú ý','Cao','Rất cao'];
 function vTK(m){const S=D.stock.filter(r=>inF(r.kho)),A=D.aging.filter(r=>inF(r.kho)),L=D.alerts.filter(r=>inF(r.kho));
